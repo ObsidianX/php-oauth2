@@ -1359,16 +1359,8 @@ abstract class OAuth2 {
     // Issue a refresh token also, if we support them
     if (in_array(OAUTH2_GRANT_TYPE_REFRESH_TOKEN, $this->getSupportedGrantTypes())) {
       $oldRefreshToken = $this->getVariable('_old_refresh_token');
-      $regenerate = true;
-      if ($oldRefreshToken) {
-          // Refresh token already exists
-          if ($this->getVariable(OAUTH2_CONFIG_REFRESH_TOKEN_LIFETIME, OAUTH2_DEFAULT_REFRESH_TOKEN_LIFETIME) == OAUTH2_IMMORTAL_REFRESH_TOKEN_LIFETIME ||
-              time() < $oldRefreshToken['expiration']) {
-              $regenerate = false;
-          }
-      }
 
-      if ($regenerate) {
+      if ($this->getVariable(OAUTH2_CONFIG_REFRESH_TOKEN_LIFETIME, OAUTH2_DEFAULT_REFRESH_TOKEN_LIFETIME) != OAUTH2_IMMORTAL_REFRESH_TOKEN_LIFETIME) {
         $token["refresh_token"] = $this->genAccessToken();
         $this->setRefreshToken($token["refresh_token"], $client_id, time() + $this->getVariable(OAUTH2_CONFIG_REFRESH_TOKEN_LIFETIME, OAUTH2_DEFAULT_REFRESH_TOKEN_LIFETIME), $scope);
         // If we've granted a new refresh token, expire the old one
