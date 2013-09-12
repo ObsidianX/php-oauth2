@@ -249,7 +249,7 @@ define("OAUTH2_CONFIG_AUTH_TOKEN_LIFETIME", "access_token_lifetime");
  * Used to specify the refresh token expiration length (in seconds)
  * Default value: OAUTH2_DEFAULT_REFRESH_TOKEN_LIFETIME
  */
-define("OAUTH2_CONFIG_REFRESH_TOKEN_EXPIRATION", "refresh_token_lifetime");
+define("OAUTH2_CONFIG_REFRESH_TOKEN_LIFETIME", "refresh_token_lifetime");
 
 /**
  * @}
@@ -913,7 +913,8 @@ abstract class OAuth2 {
       #return $exit_invalid ? $this->errorWWWAuthenticateResponseHeader(OAUTH2_HTTP_UNAUTHORIZED, $realm, OAUTH2_ERROR_INVALID_TOKEN, 'The access token provided is invalid.', NULL, $scope) : FALSE;
 
     // Check token expiration (I'm leaving this check separated, later we'll fill in better error messages)
-    if (isset($token["expires"]) && time() > $token["expires"])
+    $lifetime = $this->getVariable(OAUTH2_CONFIG_REFRESH_TOKEN_LIFETIME, OAUTH2_DEFAULT_REFRESH_TOKEN_LIFETIME);
+    if (isset($token["expires"]) && time() > $token["expires"] && $lifetime != OAUTH2_IMMORTAL_REFRESH_TOKEN_LIFETIME)
       return $exit_expired ? $this->errorJsonResponse(OAUTH2_HTTP_UNAUTHORIZED, OAUTH2_ERROR_EXPIRED_TOKEN, 'The access token provided has expired.') : FALSE;
       #return $exit_expired ? $this->errorWWWAuthenticateResponseHeader(OAUTH2_HTTP_UNAUTHORIZED, $realm, OAUTH2_ERROR_EXPIRED_TOKEN, 'The access token provided has expired.', NULL, $scope) : FALSE;
 
@@ -1090,7 +1091,8 @@ abstract class OAuth2 {
         if ($stored === NULL || $client[0] != $stored["client_id"])
           $this->errorJsonResponse(OAUTH2_HTTP_BAD_REQUEST, OAUTH2_ERROR_INVALID_GRANT);
 
-        if ($stored["expires"] < time())
+        $lifetime = $this->getVariable(OAUTH2_CONFIG_REFRESH_TOKEN_LIFETIME, OAUTH2_DEFAULT_REFRESH_TOKEN_LIFETIME);
+        if ($stored["expires"] < time() && $lifetime != OAUTH2_IMMORTAL_REFRESH_TOKEN_LIFETIME)
           $this->errorJsonResponse(OAUTH2_HTTP_BAD_REQUEST, OAUTH2_ERROR_EXPIRED_TOKEN);
 
         // store the refresh token locally so we can delete it when a new refresh token is generated
@@ -1360,7 +1362,7 @@ abstract class OAuth2 {
     if (in_array(OAUTH2_GRANT_TYPE_REFRESH_TOKEN, $this->getSupportedGrantTypes())) {
       $oldRefreshToken = $this->getVariable('_old_refresh_token');
 
-      if ($this->getVariable(OAUTH2_CONFIG_REFRESH_TOKEN_LIFETIME, OAUTH2_DEFAULT_REFRESH_TOKEN_LIFETIME) != OAUTH2_IMMORTAL_REFRESH_TOKEN_LIFETIME) {
+      if ($this->getVariable(OAUTH2_CONFIG_REFRESH_TOKEN_LIFETIME, OAUTH2_DEFAULT_REFRESH_TOKEN_LIFETIME) != OAUTH2_IMMORTAL_REFRESH_TOKEN_LIFETIME || !$oldRefreshToken) {
         $token["refresh_token"] = $this->genAccessToken();
         $this->setRefreshToken($token["refresh_token"], $client_id, time() + $this->getVariable(OAUTH2_CONFIG_REFRESH_TOKEN_LIFETIME, OAUTH2_DEFAULT_REFRESH_TOKEN_LIFETIME), $scope);
         // If we've granted a new refresh token, expire the old one
